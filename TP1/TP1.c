@@ -20,6 +20,11 @@ void FreeFuncVals(func_vals_t* func){
     free(func);
 }
 
+void FreeTab(tab_t* tab){
+    free(tab->vals);
+    free(tab);
+}
+
 void PrintTab(tab_t tab){
     for(int i = 0; i < tab.len; i++)
         printf("%lf ", tab.vals[i]);
@@ -137,8 +142,8 @@ func_vals_t* Calcul_P_PointParPointAvecM(func_vals_t func, int m){
 }
 
 func_vals_t* Calcul_P_PointParPointAvecH(func_vals_t func, double h){
-    int m = (func.x[func.len-1] - func.x[0])/h;
-    //printf("%lf \n", h);
+    int m = (int)((double)(func.x[func.len-1] - func.x[0])/h);
+    printf("%d \n", m);
     double pas_despace;
     func_vals_t* vecP = InitFuncVals(m+1);
     for(int k = 0; k <= m; k++){
@@ -255,7 +260,18 @@ int main(){
         FreeFuncVals(points_calcule);
     }
     fclose(fichier_erreurs_simp);
+
+    for(double h= 1; h > 1e-7; h = h/10.){
+        points_calcule = Calcul_P_PointParPointAvecH(*func_TP1, h);
+        result =  CompositeTrapezes(-2, 6, *points_calcule);
+        printf("comp_trap = %.16lf +- %.16lf %.16lf %.16lf\n",result.val, result.err, fabs(result.val-(REAL_VAL)), h);
+        //fprintf(fichier_erreurs_trap, "%.16lf %.16lf\n", points_calcule->x[1]-points_calcule->x[0], fabs(result.val-(REAL_VAL)));//, result.val, result.err, m);%.16lf %.16lf %d
+        FreeFuncVals(points_calcule);
+    }
+
     FreeFuncVals(func_TP1);
     printf("vraie val = %.16lf\n", REAL_VAL);
+
+
     return 0;
 }
