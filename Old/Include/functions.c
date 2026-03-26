@@ -57,7 +57,7 @@ func_vals_t* InitFuncValsWithInterval(int nb_intervals, double min, double max){
 }
 
 func_vals2_t* InitFuncVals2(int lenx, int leny){
-    func_vals2_t* new_func = malloc(sizeof(func_vals2_t));
+    func_vals2_t* new_func = malloc(sizeof(func_vals_t));
     new_func->lenx=lenx;
     new_func->leny=leny;
     new_func->x = malloc(sizeof(double)*new_func->lenx);

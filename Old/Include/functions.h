@@ -6,8 +6,7 @@
 typedef double (*functype)();
 typedef double (*functype1)(double);
 typedef double (*functype2)(double, double);
-typedef double (*functype3)(double, double, double);
-typedef double (*functypegeneral)(void*); // if we pass this function we neeed to unpack it before using and assumes that the int memory spaces are accesble and given in doubles
+
 
 typedef struct Tableau{
     int len;
@@ -47,5 +46,4 @@ func_vals_t* ReadFuncAndValsXandF_InRows(char* nom_fichier);
 func_vals_t* ReadFuncAndValsXandF_InColumns(char* nom_fichier);
 void PrintFunc(func_vals_t func);
 void EcritureFunc_Vals(func_vals_t func_to_print, char* nom_fichier_de_print);
-
 #endif // FUNCTIONS_H

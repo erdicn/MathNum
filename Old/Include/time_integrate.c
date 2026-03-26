@@ -8,19 +8,12 @@
 typedef double (*functypeEDOsolver)(double, double, functype2, double);
 
 
-// y is our fuction and x our space in this example we have dy/dx = x*x*cos(y) but generaly it is our space discretisation 
 double FuncTP2(double x, double y){
     return x*x*cos(y);
 }
 
 double SolAnalytiqueFuncTP2(double x){
     return 2*atan(exp(x*x*x/3)) - M_PI_2;
-}
-
-double EulersMethodGeneral(double yi, double dt, functypegeneral func_to_solve, void* params){
-    double k1 = func_to_solve(params);
-    double yi_plus_1 = yi + dt*k1;
-    return yi_plus_1;
 }
 
 double EulersMethod(double xi, double yi, functype2 func_to_solve, double h){
