@@ -8,9 +8,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include "myfloat.h"
 
-// typedef float myfloat;
-typedef double myfloat;
 
 typedef struct fmatCOO{
     int nb_cols, nb_rows;
@@ -63,9 +62,9 @@ fmatCSR_t* allocateFMatCSR(fmatCSR_t* mat, int nb_non_zero, int nb_rows, int nb_
     mat->nb_rows     = nb_rows;
     mat->nb_non_zero = nb_non_zero;
 
-    mat->vals  = malloc(sizeof(myfloat) * nb_non_zero      );
-    mat->col_i = malloc(sizeof(int)   * nb_non_zero        );
-    mat->row_i = malloc(sizeof(int)   * (mat->nb_rows + 1) );
+    mat->vals  = calloc(nb_non_zero       , sizeof(myfloat));
+    mat->col_i = calloc(nb_non_zero       , sizeof(int)    );
+    mat->row_i = calloc((mat->nb_rows + 1), sizeof(int)    );
     return mat;
 }
 
@@ -124,7 +123,7 @@ fmatD_t* allocateFMatD(fmatD_t* mat, int nb_rows, int nb_cols){
     mat->nb_cols = nb_cols;
     mat->nb_rows = nb_rows;
 
-    mat->vals  = malloc(sizeof(myfloat)*nb_cols*nb_rows);
+    mat->vals  = calloc(nb_cols*nb_rows, sizeof(myfloat));
     return mat;
 }
 
@@ -203,6 +202,15 @@ fmatCSR_t* initializeRandomFMatCSR(int nb_rows, int nb_cols, myfloat density, in
     return mat;
 }
 
+fmatD_t* initaliseRandomFMatD(fmatD_t* mat, int rand_seed, myfloat rand_min, myfloat rand_max){
+    assert(mat);
+    assert(mat->vals);
+    for(size_t i = 0; i < mat->nb_cols*mat->nb_rows; i++){
+        mat->vals[i]  = getRandomFloat(rand_min, rand_max);
+    }
+    return mat;
+}
+
 fvec_t* initializeRandomFVec(int len, myfloat rand_min, myfloat rand_max){
     fvec_t* vec = allocateFVec(NULL, len);
      for (int i = 0; i < vec->len; i++)
@@ -256,7 +264,7 @@ fvec_t* initializeFVec(fvec_t* vec, myfloat init_val){
 }
 
 fvec_t* newCopyFVec(fvec_t* new_vec, fvec_t* vec){
-    new_vec = allocateFVec(new_vec, vec->len);
+    new_vec = allocateFVec(new_vec, vec->len); // TODO memoy leak doesnt frees the new_vec data
     memcpy(new_vec->vals, vec->vals, sizeof(myfloat)*vec->len);
     return new_vec;
 }
