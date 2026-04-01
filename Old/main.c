@@ -4,12 +4,9 @@
 #include <stdbool.h>
 #include <assert.h>
 
-
-#ifdef MOVING_ADAPTIVE_MESH
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_odeiv2.h>
-#endif
 
 #ifdef _OPENMP
 #include <omp.h> // even thought we live in a 1D world we should enjoy using the whole computer
@@ -50,7 +47,7 @@ static inline void errorMessage(char* error, int line, const char* file){
 #define CHECK_ERROR(nb)   if(nb != 0) ERROR_MESSAGE("check_error")
 
 #define MAX_FILENAME_LEN 128
-#define G  9.80665
+#define G 9.80665
 #define GAMMA 1
 
 #ifdef EPS
@@ -79,11 +76,11 @@ myfloat maxAbsEigenvalue(fvec_t* h, fvec_t* Q){
     #if GAMMA!=1
         myfloat g2 = GAMMA*GAMMA;
     #endif
-    #pragma omp parallel for reduction(max:max_val)
+    #pragma omp parallel for
     for(int i = 0; i < h->len; i++){
         myfloat u = h->vals[i] > EPS ? Q->vals[i] / h->vals[i] : 0;
         #if GAMMA==1
-            myfloat sq = sqrt(G*MYABS(h->vals[i]));
+            myfloat sq = sqrt(G*h->vals[i]);
             myfloat e1 = fabs(u + sq);
             myfloat e2 = fabs(u - sq);
         #else
@@ -217,10 +214,6 @@ static inline myfloat rusanovMomentumFlux(myfloat ug, myfloat ud, myfloat hg, my
     return 0.5 * (mom_g + mom_d) - 0.5 * c_max * (hd*ud - hg*ug);
 }
 
-
-#define USE_SLOPE
-// #define FRICTION
-#define N_CF 0.03 /*galets*/ 
 void rusanovMethod(fvec_t* h, fvec_t* q, fvec_t* Z, myfloat dt, myfloat end_t, myfloat t, myfloat DX, TimeSaver_t* timesteps_to_save){
     fvec_t *h_tmp  = newCopyFVec(NULL, h);
     fvec_t *q_star = newCopyFVec(NULL, q);
@@ -253,26 +246,13 @@ void rusanovMethod(fvec_t* h, fvec_t* q, fvec_t* Z, myfloat dt, myfloat end_t, m
         f_mom->vals[h->len]  = f_mom->vals[h->len-1];
 
         #pragma omp parallel for
-        for(i = 1; i < h->len-1; i++) {
+        for(i = 0; i < h->len; i++) {
             h_tmp->vals[i] = h->vals[i] - (dt / DX) * (f_mass->vals[i+1] - f_mass->vals[i]);
 
             if (h_tmp->vals[i] > EPS) {
-                myfloat source_term  = 0;
-                q_star->vals[i] = q->vals[i] - (dt / DX) * (f_mom->vals[i+1] - f_mom->vals[i]);
-
-                #ifdef USE_SLOPE
-                    myfloat dZ_dx = (Z->vals[i+1] - Z->vals[i-1]) / (2.0 * DX);
-                    source_term += -G * h->vals[i] * dZ_dx;
-                #endif
-
-                q_star->vals[i] += (dt*source_term);
-
-                #ifdef FRICTION
-                    myfloat u = q_star->vals[i]/h_tmp->vals[i];
-                    myfloat Cf = G*N_CF*N_CF/(MYPOW(h_tmp->vals[i], 1./3.));
-                    q_star->vals[i] /= 1.0 + (dt * 0.5 * Cf * MYABS(u)) / h_tmp->vals[i];
-                #endif
-
+                myfloat dZ_dx = (Z->vals[i+1] - Z->vals[i-1]) / (2.0 * DX);
+                myfloat source_term = -G * h->vals[i] * dZ_dx;
+                q_star->vals[i] = q->vals[i] - (dt / DX) * (f_mom->vals[i+1] - f_mom->vals[i]) + (dt*source_term);
             } else {
                 h_tmp->vals[i] = 0.0; 
                 q_star->vals[i] = 0.0;
@@ -284,21 +264,31 @@ void rusanovMethod(fvec_t* h, fvec_t* q, fvec_t* Z, myfloat dt, myfloat end_t, m
         h_tmp->vals[h->len-1] = h_tmp->vals[h->len-2];
         q_star->vals[h->len-1] = q_star->vals[h->len-2];
 
+// Tried but not working 
+// #       ifdef REFLECTIVE
+//             h_tmp->vals[0] = h_tmp->vals[1];
+//             q_star->vals[0] = -q_star->vals[1]; 
+            
+//             h_tmp->vals[h->len-1] = h_tmp->vals[h->len-2];
+//             q_star->vals[h->len-1] = -q_star->vals[h->len-2];
+// #       endif
+
+        #pragma omp parallel for
+        for(i = 0; i < q->len; i++) {
+            q->vals[i] = q_star->vals[i];
+        }
+
         char filename[64];
         sprintf(filename, "Out/");
-        SWAP(q, q_star, fvec_t*);
         SWAP(h, h_tmp, fvec_t*);
-        int saved = saveTimesteps(timesteps_to_save, t, h, dt, filename);
-        saved = saveTimesteps(timesteps_to_save, t, q, dt, filename);
-       
+        saveTimesteps(timesteps_to_save, t, h, dt, filename);
+
         t += dt;
         
+        // (Optional: You can uncomment your dynamic dt calculation here)
         dt = CFL * DX / maxAbsEigenvalue(h, q);
     }
 }
-
-
-#ifdef MOVING_ADAPTIVE_MESH
 
 // I wax thinking of using cuda with an explicit scheme but since dx -> 0 for stability dt -> 0 too so abandonned that idea 
 HOST_DEVICE static inline myfloat d2u_dx2(myfloat uj_m1, myfloat uj, myfloat uj_p1,
@@ -351,7 +341,6 @@ int max(int A[], int i, int j)
 }
 
 #define TAU 0.01
-// explicit method that doesnt work
 int mainAdaptiveh23Test(int argc, char* argv[]){
     assert(argc > 1);
     int N_grid = atoi(argv[1]);
@@ -382,7 +371,7 @@ int mainAdaptiveh23Test(int argc, char* argv[]){
     FOR_EACH_VEC(advective_speed, i) =  3./2. * sqrt(advective_speed->vals[i]); // i became my own nightmare TODO better func 
 
     myfloat dt = 1;
-    //  = CFL*getMaxAbsFvec(advective_speed); 
+    //  = CFL*/getMaxAbsFvec(advective_speed); 
     #pragma omp parallel for reduction(min:dt) 
     for (int i = 1; i<x->len-1; i++)
         dt = MIN(dt, (x->vals[i+1]-x->vals[i-1])*0.5/(MYABS(advective_speed->vals[i])));
@@ -656,20 +645,20 @@ int mainAdaptiveGSL(int argc, char* argv[]){
     // TODO leaking my vecs but since afterwards the program closes its ok
     return 0;
 }
-#endif // MOVING_ADAPTIVE_MESH
-// int mainOld(int argc, char* argv[]);
 
-// int main(int argc, char* argv[]){
-//     // mainAdaptiveGSL(argc, argv);
-//     mainOld(argc, argv);
-//     return 0;
-// }
+int mainOld(int argc, char* argv[]);
 
 int main(int argc, char* argv[]){
+    mainAdaptiveGSL(argc, argv);
+    // mainOld(argc, argv);
+    return 0;
+}
+
+int mainOld(int argc, char* argv[]){
     assert(argc > 1);
     int N_grid = atoi(argv[1]);
     testOpenMP(16);
-    myfloat x_min = -8, x_max = 32, end_t = 32, t = 0;
+    myfloat x_min = -8, x_max = 32, end_t = 80, t = 0;
     fvec_t *h  = allocateFVec(NULL, N_grid);
     fvec_t *q  = allocateFVec(NULL, N_grid);
     fvec_t *Z  = allocateFVec(NULL, N_grid); // bottom
@@ -684,7 +673,7 @@ int main(int argc, char* argv[]){
 
     myfloat DX = dx->vals[0];
 
-    FOR_EACH_VEC(h, i) = (x->vals[i] < 0)*1 ;//+ (x->vals[i] < 4)*0.25;
+    FOR_EACH_VEC(h, i) = (x->vals[i] < 0)*0.75 ;//+ (x->vals[i] < 4)*0.25;
     FOR_EACH_VEC(Z, i) = (x->vals[i] > 5)*((x->vals[i] - 5)*0.05);
     // for(int i = 0; i < x->len; i++){
     //     h->vals[i] = 0.5 + exp(-pow(x->vals[i], 2));
@@ -703,8 +692,8 @@ int main(int argc, char* argv[]){
     printf("Timesteps to save (t_end = %lf) : ", end_t); 
     printFArrValues(timesteps_to_save->to_save, timesteps_to_save->len);
 
-    saveVecToFile(Z, "Out/x/z.dat");
-    saveVecToFile(x, "Out/x/x.dat");
+    saveVecToFile(Z, "z.dat");
+    saveVecToFile(x, "x.dat");
     rusanovMethod(h, q, Z, dt, end_t, t, DX, timesteps_to_save);
     return 0;
 }

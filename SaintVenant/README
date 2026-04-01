@@ -1,0 +1,7 @@
+"make par" to do multithreaded simulation otherwise just "make" to run the code. 
+
+then to execute "./exe.exe NB_GRID_PTS" and put number of grid points wanted for NB_GRID_PTS.
+
+Disclamer if rerun the code overwrites the files in the Out directory. But it doesnt restart the directory so it is recomended to remove all the .dat files from there so there are not multiple simulation results in one folder. 
+
+Not the best state but i am long passed the perfection step if it would had been perfect i would have a in house multigrid solver that runs on GPUs with 2D avalanche simulations but time is limited. 

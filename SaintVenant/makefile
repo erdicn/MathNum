@@ -1,6 +1,6 @@
 CC      = gcc
 TARGET  = exe.exe
-INCDIR  = /home/erdi/Uni/MyPrograms/MatLib/MathNum/Include
+INCDIR  = ../Include
 PROJDIR = $(CURDIR)
 BUILDDIR = build
 
@@ -8,7 +8,7 @@ INCLUDES = -I. -I$(INCDIR)
 CFLAGS   = -O3 -Wall -Wextra -Wshadow -Wcast-align -Wunused-const-variable=2 \
            -Wfloat-equal -Wundef -Wcast-qual -Wunreachable-code \
            $(INCLUDES)
-LDFLAGS  = -lm -lgsl -lgslcblas
+LDFLAGS  = -lm -lgsl -lgslcblas 
 
 SRCS    = $(wildcard *.c) $(shell find $(INCDIR) -name '*.c') #$(wildcard $(INCDIR)/*.c)
 
