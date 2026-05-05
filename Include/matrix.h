@@ -240,6 +240,7 @@ fvec_t* linspaceFvecCentered(fvec_t* vec, myfloat min, myfloat max, int len){
     return vec;
 }
 
+// also includes min too 
 fvec_t* linspaceFvecIncludeMax(fvec_t* vec, myfloat min, myfloat max, int len){
     if (vec == NULL){
         vec = allocateFVec(vec, len);

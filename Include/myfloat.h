@@ -22,6 +22,12 @@ typedef double myfloat;
                                              powl(x, p)   \
 )
 
+#define MYSQRT(x) ( \
+    sizeof(myfloat) == sizeof(float)       ? sqrtf(x) : \
+    sizeof(myfloat) == sizeof(double)      ? sqrt(x )  : \
+                                             sqrtl(x)   \
+)
+
 #define MYCBRT(x) ( \
     sizeof(myfloat) == sizeof(float)       ? cbrtf(x) : \
     sizeof(myfloat) == sizeof(double)      ? cbrt(x )  : \

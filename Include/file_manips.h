@@ -29,8 +29,9 @@ void saveVecToFile(fvec_t* vec, char* filename){
         return;
     }
     // fprintf(file, "%d\n",vec->len);
-    for(int i = 0; i < vec->len; i++){
-        fprintf(file, "%lf ", vec->vals[i]); // TODO easily swithcable prints 
+    int i;
+    for( i = 0; i < vec->len; i++){
+        fprintf(file, "%.16lf\n", vec->vals[i]); // TODO easily swithcable prints 
     }
     fclose(file);
     return;
